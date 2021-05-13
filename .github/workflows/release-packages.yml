@@ -1,0 +1,126 @@
+name: Release Packages
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+jobs:
+  build-application-for-linux:
+    runs-on: ubuntu-latest
+    container:
+      image:  golang:1.16.4-alpine3.13@sha256:9dd1788d4bd0df3006d79a88bda67cb8357ab49028eebbcb1ae64f2ec07be627
+    defaults:
+      run:
+        working-directory: ./src
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Run apk update
+        run: |
+          apk --no-cache update
+      - name: Run apk upgrade
+        run: |
+          apk --no-cache upgrade
+      - name: Add build-base and zip packages
+        run: |
+          apk --no-cache add build-base zip
+      - name: Run mod download
+        run: |
+          go mod download
+      - name: Run mod verify
+        run: |
+          go mod verify
+      - name: Run tests
+        run: |
+          go test
+      - name: Build process-logger application
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s" -o process-logger-linux
+      - name: Create a zip archive file
+        run: |
+          zip process-logger-linux.zip process-logger-linux
+      - name: Upload Archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: process-logger-linux
+          path: src/process-logger-linux.zip
+          if-no-files-found: error
+          retention-days: 1
+  release-applications:
+    needs: build-application-for-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download a single artifact
+        uses: actions/download-artifact@v2
+      - name: Get Next Version Number
+        id: next-version
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            var currentReleaseName = ""
+            try {
+              const getReleaseResp = await github.repos.getLatestRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              })
+              currentReleaseName = getReleaseResp.data.name
+              console.log(`Current Release Name: ${currentReleaseName}`)
+            } catch(err) {
+              if (err.name == 'HttpError') {
+                console.warn("Found HttpError")
+                if (err.status == 404)  {
+                  console.warn("Error 404. No latest release found. Starting from 0.")
+                  currentReleaseName = "v0"
+                }
+              } else {
+                console.error(`Failed to get the latest release: ${err.message}`)
+                throw err
+              }
+            }
+            finally {
+              var currentReleaseNumberStr = currentReleaseName.replace(/\D/g, '')
+              var currentReleaseNumberParseInt = parseInt(currentReleaseNumberStr)
+              var currentReleaseNumber = isNaN(currentReleaseNumberParseInt) ? 0 : currentReleaseNumberParseInt
+
+              var nextRelease = "v" + (currentReleaseNumber + 1)
+              console.log(`Next Release Version: ${nextRelease}`)
+              console.log(`::set-output name=NEXTVERSION::${nextRelease}`)
+            }
+      - name: Rename zip files to include next version number
+        id: rename-zip-files
+        env:
+          NEXTVERSION: ${{ steps.next-version.outputs.NEXTVERSION }}
+        run: |
+          cd process-logger-linux
+          mv process-logger-linux.zip process-logger-linux-${NEXTVERSION}.zip
+          mv process-logger-linux-${NEXTVERSION}.zip ../
+          echo "::set-output name=LINUX_PACKAGE::process-logger-linux-${NEXTVERSION}"
+      - name: Create Release
+        uses: actions/github-script@v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            var fs = require('fs')
+            try {
+              const releaseResponse = await github.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: "${{ steps.next-version.outputs.NEXTVERSION }}",
+                name: "${{ steps.next-version.outputs.NEXTVERSION }}"
+              })
+
+              const linuxPackage ="${{ steps.rename-zip-files.outputs.LINUX_PACKAGE }}.zip"
+
+              await github.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: releaseResponse.data.id,
+                name: linuxPackage,
+                data: fs.readFileSync(linuxPackage)
+              })
+            } catch(err) {
+              console.error(`Failed to create release: ${err.message}`)
+              throw err
+            }

@@ -1,0 +1,35 @@
+name: Check Pull Request
+on:
+  pull_request:
+jobs:
+  build-application-for-linux:
+    runs-on: ubuntu-latest
+    container:
+      image:  golang:1.16.4-alpine3.13@sha256:9dd1788d4bd0df3006d79a88bda67cb8357ab49028eebbcb1ae64f2ec07be627
+    defaults:
+      run:
+        working-directory: ./src
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Run apk update
+        run: |
+          apk --no-cache update
+      - name: Run apk upgrade
+        run: |
+          apk --no-cache upgrade
+      - name: Add build-base and zip packages
+        run: |
+          apk --no-cache add build-base zip
+      - name: Run mod download
+        run: |
+          go mod download
+      - name: Run mod verify
+        run: |
+          go mod verify
+      - name: Run tests
+        run: |
+          go test
+      - name: Build process-logger application
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s" -o process-logger
