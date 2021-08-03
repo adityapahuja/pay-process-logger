@@ -15,7 +15,7 @@ jobs:
         working-directory: ./src
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
       - name: Run apk update
         run: |
           apk --no-cache update
@@ -41,7 +41,7 @@ jobs:
         run: |
           zip process-logger-linux.zip process-logger-linux
       - name: Upload Archive
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074
         with:
           name: process-logger-linux
           path: src/process-logger-linux.zip
@@ -52,10 +52,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download a single artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60
       - name: Get Next Version Number
         id: next-version
-        uses: actions/github-script@v4
+        uses: actions/github-script@a3e7071a34d7e1f219a8a4de9a5e0a34d1ee1293
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -98,7 +98,7 @@ jobs:
           mv process-logger-linux-${NEXTVERSION}.zip ../
           echo "::set-output name=LINUX_PACKAGE::process-logger-linux-${NEXTVERSION}"
       - name: Create Release
-        uses: actions/github-script@v3.1.0
+        uses: actions/github-script@a3e7071a34d7e1f219a8a4de9a5e0a34d1ee1293
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
