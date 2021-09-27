@@ -55,7 +55,7 @@ jobs:
         uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60
       - name: Get Next Version Number
         id: next-version
-        uses: actions/github-script@a3e7071a34d7e1f219a8a4de9a5e0a34d1ee1293
+        uses: actions/github-script@441359b1a30438de65712c2fbca0abe4816fa667
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -98,7 +98,7 @@ jobs:
           mv process-logger-linux-${NEXTVERSION}.zip ../
           echo "::set-output name=LINUX_PACKAGE::process-logger-linux-${NEXTVERSION}"
       - name: Create Release
-        uses: actions/github-script@a3e7071a34d7e1f219a8a4de9a5e0a34d1ee1293
+        uses: actions/github-script@441359b1a30438de65712c2fbca0abe4816fa667
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
