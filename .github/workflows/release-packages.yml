@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download a single artifact
-        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60
+        uses: actions/download-artifact@f023be2c48cc18debc3bacd34cb396e0295e2869
       - name: Get Next Version Number
         id: next-version
         uses: actions/github-script@a3e7071a34d7e1f219a8a4de9a5e0a34d1ee1293
